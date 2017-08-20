@@ -16,7 +16,10 @@ buildscript {
     }
 }
 
+apply plugin: 'io.ratpack.ratpack-groovy'
+
 apply from: 'coverage.gradle'
+apply from: 'integTest.gradle'
 apply from: 'license.gradle'
 
 repositories {
