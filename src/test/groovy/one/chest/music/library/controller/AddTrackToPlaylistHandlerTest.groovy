@@ -21,32 +21,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library
+package one.chest.music.library.controller
 
 import groovy.transform.CompileStatic
+import one.chest.music.library.service.PlaylistService
 import org.junit.Test
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+
+import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
 
 @CompileStatic
-class MusicLibraryIntegrationTest {
-
-    private GroovyRatpackMainApplicationUnderTest app = new GroovyRatpackMainApplicationUnderTest()
+class AddTrackToPlaylistHandlerTest {
 
     @Test
-    void testHealth() {
-        assert app.httpClient.getText("health") == "ok"
-    }
-
-    @Test
-    void testAddTrack() {
-        def response = app.httpClient.request("playlist/tracks") {
-            it.method "POST"
-            it.body {
-                it.text "trackId=1&albumId=2"
-                it.type "application/x-www-form-urlencoded"
-            }
+    void addTrack() {
+        List<Track> result = []
+        def response = handle(new AddTrackToPlaylistHandler(
+                playlist: [addTrack: { Track track -> result << track }] as PlaylistService
+        )) {
+            method "POST"
+            body "trackId=1&albumId=2", "application/x-www-form-urlencoded"
         }
-        assert response.body.text.empty && response.status.code == 200
+        assert response.bodyText?.empty && response.status.code == 200
+        assert result.size() == 1
+        assert result[0].trackId == 1
+        assert result[0].albumId == 2
     }
 
 }

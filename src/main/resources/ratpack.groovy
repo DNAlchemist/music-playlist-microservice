@@ -21,8 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
+import one.chest.music.library.controller.AddTrackToPlaylistHandler
 import one.chest.music.library.controller.HealthHandler
+import one.chest.music.library.repository.inmemory.InMemoryGuiceModule
 
 import static ratpack.groovy.Groovy.ratpack
 import static ratpack.handling.RequestLogger.ncsa
@@ -30,12 +31,15 @@ import static ratpack.handling.RequestLogger.ncsa
 ratpack {
 
     bindings {
+        module InMemoryGuiceModule
         module {
             bind HealthHandler
+            bind AddTrackToPlaylistHandler
         }
     }
 
     handlers {
         all ncsa() get "health", HealthHandler
+        post "playlist/track", AddTrackToPlaylistHandler
     }
 }

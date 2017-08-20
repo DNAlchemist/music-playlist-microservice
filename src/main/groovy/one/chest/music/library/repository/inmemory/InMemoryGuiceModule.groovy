@@ -21,32 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library
+package one.chest.music.library.repository.inmemory
 
+import com.google.inject.AbstractModule
+import com.google.inject.Scopes
 import groovy.transform.CompileStatic
-import org.junit.Test
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import one.chest.music.library.repository.PlaylistRepository
 
 @CompileStatic
-class MusicLibraryIntegrationTest {
+class InMemoryGuiceModule extends AbstractModule {
 
-    private GroovyRatpackMainApplicationUnderTest app = new GroovyRatpackMainApplicationUnderTest()
-
-    @Test
-    void testHealth() {
-        assert app.httpClient.getText("health") == "ok"
-    }
-
-    @Test
-    void testAddTrack() {
-        def response = app.httpClient.request("playlist/tracks") {
-            it.method "POST"
-            it.body {
-                it.text "trackId=1&albumId=2"
-                it.type "application/x-www-form-urlencoded"
-            }
-        }
-        assert response.body.text.empty && response.status.code == 200
+    @Override
+    protected void configure() {
+        bind(PlaylistRepository).to(InMemoryPlaylistRepository).in(Scopes.SINGLETON)
     }
 
 }

@@ -21,32 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library
+package one.chest.music.library.repository
 
 import groovy.transform.CompileStatic
-import org.junit.Test
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import one.chest.music.library.controller.Track
 
 @CompileStatic
-class MusicLibraryIntegrationTest {
+interface PlaylistRepository {
 
-    private GroovyRatpackMainApplicationUnderTest app = new GroovyRatpackMainApplicationUnderTest()
+    void addTrack(Track track)
 
-    @Test
-    void testHealth() {
-        assert app.httpClient.getText("health") == "ok"
-    }
-
-    @Test
-    void testAddTrack() {
-        def response = app.httpClient.request("playlist/tracks") {
-            it.method "POST"
-            it.body {
-                it.text "trackId=1&albumId=2"
-                it.type "application/x-www-form-urlencoded"
-            }
-        }
-        assert response.body.text.empty && response.status.code == 200
-    }
-
+    List<Track> getTracks()
+    
 }
