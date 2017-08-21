@@ -25,26 +25,51 @@ package one.chest.music.library.controller
 
 import groovy.transform.CompileStatic
 import one.chest.music.library.service.PlaylistService
-import org.junit.Test
+import ratpack.form.Form
+import ratpack.groovy.handling.GroovyContext
+import ratpack.groovy.handling.GroovyHandler
+import ratpack.jackson.Jackson
 
-import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
+import javax.inject.Inject
 
 @CompileStatic
-class AddTrackToPlaylistHandlerTest {
+class TracksHandler extends GroovyHandler {
 
-    @Test
-    void addTrack() {
-        List<Track> result = []
-        def response = handle(new AddTrackToPlaylistHandler(
-                playlist: [addTrack: { Track track -> result << track }] as PlaylistService
-        )) {
-            method "POST"
-            body "trackId=1&albumId=2", "application/x-www-form-urlencoded"
+    @Inject
+    private PlaylistService playlist
+
+    private GroovyContext ctx
+
+    @Override
+    protected void handle(GroovyContext ctx) {
+        this.ctx = ctx;
+        ctx.byMethod {
+            get(this.&doGet)
+            post(this.&doPost)
         }
-        assert response.bodyText?.empty && response.status.code == 200
-        assert result.size() == 1
-        assert result[0].trackId == 1
-        assert result[0].albumId == 2
+    }
+
+    private void doGet() {
+        try {
+            ctx.render Jackson.json(playlist.tracks)
+            ctx.response.send()
+        } catch (e) {
+            ctx.response.status 500
+            ctx.response.send e.message
+        }
+    }
+
+    private void doPost() {
+        ctx.parse(Form).then {
+            try {
+                playlist.addTrack(it as Track)
+                ctx.response.send()
+            } catch (e) {
+                ctx.response.status 500
+                ctx.response.send e.message
+            }
+        }
     }
 
 }
+

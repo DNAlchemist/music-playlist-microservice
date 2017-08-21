@@ -38,7 +38,7 @@ class MusicLibraryIntegrationTest {
     }
 
     @Test
-    void testAddTrack() {
+    void testPlaylistCrud() {
         def response = app.httpClient.request("playlist/tracks") {
             it.method "POST"
             it.body {
@@ -47,6 +47,21 @@ class MusicLibraryIntegrationTest {
             }
         }
         assert response.body.text.empty && response.status.code == 200
+
+        def tracks = app.httpClient.getText('playlist/tracks')
+        assert tracks == '[{"albumId":2,"trackId":1}]'
+
+        response = app.httpClient.request("playlist/tracks") {
+            it.method "POST"
+            it.body {
+                it.text "trackId=3&albumId=4"
+                it.type "application/x-www-form-urlencoded"
+            }
+        }
+        assert response.body.text.empty && response.status.code == 200
+
+        tracks = app.httpClient.getText('playlist/tracks')
+        assert tracks == '[{"albumId":2,"trackId":1},{"albumId":4,"trackId":3}]'
     }
 
 }

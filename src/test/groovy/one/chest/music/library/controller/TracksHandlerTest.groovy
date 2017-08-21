@@ -25,30 +25,42 @@ package one.chest.music.library.controller
 
 import groovy.transform.CompileStatic
 import one.chest.music.library.service.PlaylistService
-import ratpack.form.Form
-import ratpack.groovy.handling.GroovyContext
-import ratpack.groovy.handling.GroovyHandler
+import org.junit.Test
+import ratpack.jackson.JsonRender
 
-import javax.inject.Inject
+import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
 
 @CompileStatic
-class AddTrackToPlaylistHandler extends GroovyHandler {
+class TracksHandlerTest {
 
-    @Inject
-    private PlaylistService playlist
-
-    @Override
-    protected void handle(GroovyContext ctx) {
-        ctx.parse(Form).then {
-            try {
-                playlist.addTrack(it as Track)
-                ctx.response.send()
-            } catch (e) {
-                ctx.response.status 500
-                ctx.response.send e.message
-            }
+    @Test
+    void addTrack() {
+        List<Track> result = []
+        def response = handle(new TracksHandler(
+                playlist: [addTrack: { Track track -> result << track }] as PlaylistService
+        )) {
+            method "POST"
+            body "trackId=1&albumId=2", "application/x-www-form-urlencoded"
         }
+        assert response.bodyText?.empty && response.status.code == 200
+        assert result.size() == 1
+        assert result[0].trackId == 1
+        assert result[0].albumId == 2
+    }
+
+    @Test
+    void getTracks() {
+        def response = handle(new TracksHandler(
+                playlist: [getTracks: {
+                    [new Track(albumId: 1, trackId: 2), new Track(albumId: 3, trackId: 4)]
+                }] as PlaylistService
+        )) {
+            method "GET"
+        }
+        assert response.rendered(JsonRender).object instanceof List
+        List<Track> list = (List<Track>) response.rendered(JsonRender).object
+        assert list[0].albumId == 1
+        assert list[0].trackId == 2
     }
 
 }
-
