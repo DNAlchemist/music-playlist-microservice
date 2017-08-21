@@ -21,11 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.repository.inmemory
+package one.chest.music.playlist.repository.inmemory
 
 import groovy.transform.CompileStatic
-import one.chest.music.library.controller.Track
-import one.chest.music.library.repository.PlaylistRepository
+import one.chest.music.playlist.controller.Track
+import one.chest.music.playlist.repository.PlaylistRepository
 
 @CompileStatic
 class InMemoryPlaylistRepository implements PlaylistRepository {

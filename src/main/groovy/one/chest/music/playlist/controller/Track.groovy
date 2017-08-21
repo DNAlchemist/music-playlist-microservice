@@ -21,18 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.service
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
-import one.chest.music.library.repository.PlaylistRepository
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 
-import javax.inject.Inject
-
+@ToString
+@EqualsAndHashCode
 @CompileStatic
-class PlaylistService {
-
-    @Delegate
-    @Inject
-    PlaylistRepository playlistRepository
-
+class Track {
+    int albumId, trackId
 }

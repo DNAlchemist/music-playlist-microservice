@@ -21,19 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.repository.inmemory
+package one.chest.music.playlist.repository
 
-import com.google.inject.AbstractModule
-import com.google.inject.Scopes
 import groovy.transform.CompileStatic
-import one.chest.music.library.repository.PlaylistRepository
+import one.chest.music.playlist.controller.Track
 
 @CompileStatic
-class InMemoryGuiceModule extends AbstractModule {
+interface PlaylistRepository {
 
-    @Override
-    protected void configure() {
-        bind(PlaylistRepository).to(InMemoryPlaylistRepository).in(Scopes.SINGLETON)
-    }
+    void addTrack(Track track)
+
+    List<Track> getTracks()
 
 }

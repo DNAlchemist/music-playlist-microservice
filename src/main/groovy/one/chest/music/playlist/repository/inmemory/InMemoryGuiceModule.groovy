@@ -21,18 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.controller
+package one.chest.music.playlist.repository.inmemory
 
+import com.google.inject.AbstractModule
+import com.google.inject.Scopes
 import groovy.transform.CompileStatic
-import ratpack.groovy.handling.GroovyContext
-import ratpack.groovy.handling.GroovyHandler
+import one.chest.music.playlist.repository.PlaylistRepository
 
 @CompileStatic
-class HealthHandler extends GroovyHandler {
+class InMemoryGuiceModule extends AbstractModule {
 
     @Override
-    protected void handle(GroovyContext ctx) {
-        ctx.response.send "ok"
+    protected void configure() {
+        bind(PlaylistRepository).to(InMemoryPlaylistRepository).in(Scopes.SINGLETON)
     }
 
 }

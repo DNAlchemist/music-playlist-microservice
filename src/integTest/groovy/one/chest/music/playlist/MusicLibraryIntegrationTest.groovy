@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
 import org.junit.Test

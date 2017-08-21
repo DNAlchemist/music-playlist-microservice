@@ -21,25 +21,56 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.repository.inmemory
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
-import one.chest.music.library.controller.Track
-import one.chest.music.library.repository.PlaylistRepository
-import org.junit.Test
+import one.chest.music.playlist.service.PlaylistService
+import ratpack.form.Form
+import ratpack.groovy.handling.GroovyContext
+import ratpack.groovy.handling.GroovyHandler
+import ratpack.jackson.Jackson
+
+import javax.inject.Inject
 
 @CompileStatic
-class InMemoryPlaylistRepositoryTest {
+class TracksHandler extends GroovyHandler {
 
-    @Test
-    void addTrack() {
-        PlaylistRepository playlist = new InMemoryPlaylistRepository()
-        playlist.addTrack(new Track(albumId: 1, trackId: 2))
-        playlist.addTrack(new Track(albumId: 3, trackId: 4))
-        assert playlist.tracks == [
-                new Track(albumId: 1, trackId: 2),
-                new Track(albumId: 3, trackId: 4)
-        ]
+    @Inject
+    private PlaylistService playlist
+
+    private GroovyContext ctx
+
+    @Override
+    protected void handle(GroovyContext ctx) {
+        this.ctx = ctx;
+        ctx.byMethod {
+            get(this.&doGet)
+            post(this.&doPost)
+        }
+    }
+
+    private void doGet() {
+        try {
+            ctx.render Jackson.json(playlist.tracks)
+            ctx.response.send()
+        } catch (e) {
+            ctx.response.status 500
+            ctx.response.send e.message
+        }
+    }
+
+    private void doPost() {
+        ctx.parse(Form).then {
+            try {
+                playlist.addTrack(it as Track)
+                ctx.response.status 201
+                ctx.response.send()
+            } catch (e) {
+                ctx.response.status 500
+                ctx.response.send e.message
+            }
+        }
     }
 
 }
+

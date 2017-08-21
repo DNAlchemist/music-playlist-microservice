@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import one.chest.music.library.controller.HealthHandler
-import one.chest.music.library.controller.TracksHandler
-import one.chest.music.library.repository.inmemory.InMemoryGuiceModule
+import one.chest.music.playlist.controller.HealthHandler
+import one.chest.music.playlist.controller.TracksHandler
+import one.chest.music.playlist.repository.inmemory.InMemoryGuiceModule
 
 import static ratpack.groovy.Groovy.ratpack
 import static ratpack.handling.RequestLogger.ncsa

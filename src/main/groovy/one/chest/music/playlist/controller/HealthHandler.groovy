@@ -21,15 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.controller
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import ratpack.groovy.handling.GroovyContext
+import ratpack.groovy.handling.GroovyHandler
 
-@ToString
-@EqualsAndHashCode
 @CompileStatic
-class Track {
-    int albumId, trackId
+class HealthHandler extends GroovyHandler {
+
+    @Override
+    protected void handle(GroovyContext ctx) {
+        ctx.response.send "ok"
+    }
+
 }

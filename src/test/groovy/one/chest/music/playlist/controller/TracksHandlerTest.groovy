@@ -21,10 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.controller
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
-import one.chest.music.library.service.PlaylistService
+import one.chest.music.playlist.service.PlaylistService
 import org.junit.Test
 import ratpack.jackson.JsonRender
 

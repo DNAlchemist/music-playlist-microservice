@@ -21,16 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.library.repository
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
-import one.chest.music.library.controller.Track
+import org.junit.Test
+
+import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
 
 @CompileStatic
-interface PlaylistRepository {
+class HealthHandlerTest {
 
-    void addTrack(Track track)
+    @Test
+    void health() {
+        def response = handle(new HealthHandler(), {})
+        assert response.bodyText == "ok"
+    }
 
-    List<Track> getTracks()
-    
 }
