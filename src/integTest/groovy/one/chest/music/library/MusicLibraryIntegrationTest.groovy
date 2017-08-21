@@ -46,7 +46,7 @@ class MusicLibraryIntegrationTest {
                 it.type "application/x-www-form-urlencoded"
             }
         }
-        assert response.body.text.empty && response.status.code == 200
+        assert response.body.text.empty && response.status.code == 201
 
         def tracks = app.httpClient.getText('playlist/tracks')
         assert tracks == '[{"albumId":2,"trackId":1}]'
@@ -58,7 +58,7 @@ class MusicLibraryIntegrationTest {
                 it.type "application/x-www-form-urlencoded"
             }
         }
-        assert response.body.text.empty && response.status.code == 200
+        assert response.body.text.empty && response.status.code == 201
 
         tracks = app.httpClient.getText('playlist/tracks')
         assert tracks == '[{"albumId":2,"trackId":1},{"albumId":4,"trackId":3}]'

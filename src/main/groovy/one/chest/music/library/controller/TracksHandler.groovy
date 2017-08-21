@@ -63,6 +63,7 @@ class TracksHandler extends GroovyHandler {
         ctx.parse(Form).then {
             try {
                 playlist.addTrack(it as Track)
+                ctx.response.status 201
                 ctx.response.send()
             } catch (e) {
                 ctx.response.status 500

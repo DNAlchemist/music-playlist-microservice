@@ -42,7 +42,7 @@ class TracksHandlerTest {
             method "POST"
             body "trackId=1&albumId=2", "application/x-www-form-urlencoded"
         }
-        assert response.bodyText?.empty && response.status.code == 200
+        assert response.bodyText?.empty && response.status.code == 201
         assert result.size() == 1
         assert result[0].trackId == 1
         assert result[0].albumId == 2
