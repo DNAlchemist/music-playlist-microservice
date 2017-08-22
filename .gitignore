@@ -29,3 +29,6 @@
 /*.iws
 /*.iml
 /*.ipr
+
+# MacOS files
+.DS_Store
