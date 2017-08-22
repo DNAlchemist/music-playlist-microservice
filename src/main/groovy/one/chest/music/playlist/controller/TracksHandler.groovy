@@ -24,6 +24,7 @@
 package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import one.chest.music.playlist.service.PlaylistService
 import ratpack.form.Form
 import ratpack.groovy.handling.GroovyContext
@@ -32,6 +33,7 @@ import ratpack.jackson.Jackson
 
 import javax.inject.Inject
 
+@Slf4j
 @CompileStatic
 class TracksHandler extends GroovyHandler {
 
@@ -42,8 +44,7 @@ class TracksHandler extends GroovyHandler {
 
     @Override
     protected void handle(GroovyContext ctx) {
-        this.ctx = ctx;
-        ctx.byMethod {
+        (this.ctx = ctx).byMethod {
             get(this.&doGet)
             post(this.&doPost)
         }
@@ -52,10 +53,10 @@ class TracksHandler extends GroovyHandler {
     private void doGet() {
         try {
             ctx.render Jackson.json(playlist.tracks)
-            ctx.response.send()
         } catch (e) {
+            log.error("Request handling error", e)
             ctx.response.status 500
-            ctx.response.send e.message
+            ctx.response.send e.message ?: "No message"
         }
     }
 
@@ -66,8 +67,9 @@ class TracksHandler extends GroovyHandler {
                 ctx.response.status 201
                 ctx.response.send()
             } catch (e) {
+                log.error("Request handling error", e)
                 ctx.response.status 500
-                ctx.response.send e.message
+                ctx.response.send e.message ?: "No message"
             }
         }
     }
