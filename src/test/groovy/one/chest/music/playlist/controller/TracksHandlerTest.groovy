@@ -40,19 +40,20 @@ class TracksHandlerTest {
                 playlist: [addTrack: { Track track -> result << track }] as PlaylistService
         )) {
             method "POST"
-            body "trackId=1&albumId=2", "application/x-www-form-urlencoded"
+            body "trackId=1&albumId=2&duration=5000", "application/x-www-form-urlencoded"
         }
         assert response.bodyText?.empty && response.status.code == 201
         assert result.size() == 1
         assert result[0].trackId == 1
         assert result[0].albumId == 2
+        assert result[0].duration == 5000
     }
 
     @Test
     void getTracks() {
         def response = handle(new TracksHandler(
                 playlist: [getTracks: {
-                    [new Track(albumId: 1, trackId: 2), new Track(albumId: 3, trackId: 4)]
+                    [new Track(albumId: 1, trackId: 2, duration: 5000L), new Track(albumId: 3, trackId: 4, duration: 5000L)]
                 }] as PlaylistService
         )) {
             method "GET"
@@ -61,6 +62,7 @@ class TracksHandlerTest {
         List<Track> list = (List<Track>) response.rendered(JsonRender).object
         assert list[0].albumId == 1
         assert list[0].trackId == 2
+        assert list[0].duration == 5000
     }
 
 }

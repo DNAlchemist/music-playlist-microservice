@@ -31,5 +31,6 @@ import groovy.transform.ToString
 @EqualsAndHashCode
 @CompileStatic
 class Track {
-    int albumId, trackId
+    Integer albumId, trackId
+    Long duration
 }

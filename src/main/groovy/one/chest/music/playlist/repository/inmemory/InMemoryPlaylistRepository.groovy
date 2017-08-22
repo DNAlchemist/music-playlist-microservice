@@ -27,10 +27,12 @@ import groovy.transform.CompileStatic
 import one.chest.music.playlist.controller.Track
 import one.chest.music.playlist.repository.PlaylistRepository
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
 @CompileStatic
 class InMemoryPlaylistRepository implements PlaylistRepository {
 
-    List<Track> playlist = new ArrayList<Track>()
+    private Queue<Track> playlist = new ConcurrentLinkedQueue<>()
 
     @Override
     void addTrack(Track track) {
@@ -38,7 +40,17 @@ class InMemoryPlaylistRepository implements PlaylistRepository {
     }
 
     @Override
-    List<Track> getTracks() {
-        return playlist.asImmutable()
+    Collection<Track> getTracks() {
+        return new ArrayList<Track>(playlist)
+    }
+
+    @Override
+    boolean isEmpty() {
+        return !playlist
+    }
+
+    @Override
+    Track poll() {
+        return playlist.poll()
     }
 }

@@ -31,6 +31,9 @@ interface PlaylistRepository {
 
     void addTrack(Track track)
 
-    List<Track> getTracks()
+    Collection<Track> getTracks()
 
+    boolean isEmpty()
+
+    Track poll()
 }

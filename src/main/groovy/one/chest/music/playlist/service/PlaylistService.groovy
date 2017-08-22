@@ -24,15 +24,22 @@
 package one.chest.music.playlist.service
 
 import groovy.transform.CompileStatic
-import one.chest.music.playlist.repository.PlaylistRepository
+import groovy.transform.TupleConstructor
+import one.chest.music.playlist.Player
 
 import javax.inject.Inject
 
+@TupleConstructor(force = true)
 @CompileStatic
 class PlaylistService {
 
     @Delegate
+    private Player player
+
     @Inject
-    PlaylistRepository playlistRepository
+    PlaylistService(Player player) {
+        this.player = player
+        Thread.start(player.&run)
+    }
 
 }

@@ -26,6 +26,9 @@ package one.chest.music.playlist
 import groovy.transform.CompileStatic
 import org.junit.Test
 import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import ratpack.http.client.ReceivedResponse
+
+import java.util.concurrent.TimeUnit
 
 @CompileStatic
 class MusicLibraryIntegrationTest {
@@ -37,31 +40,50 @@ class MusicLibraryIntegrationTest {
         assert app.httpClient.getText("health") == "ok"
     }
 
+    ReceivedResponse addTrack(int albumId, int trackId, int duration) {
+        app.httpClient.request("playlist/tracks") {
+            it.method "POST"
+            it.body {
+                it.text "albumId=${albumId}&trackId=${trackId}&duration=${duration}"
+                it.type "application/x-www-form-urlencoded"
+            }
+        }
+    }
+
+    String getTracks() {
+        app.httpClient.getText('playlist/tracks')
+    }
+
     @Test
-    void testPlaylistCrud() {
-        def response = app.httpClient.request("playlist/tracks") {
-            it.method "POST"
-            it.body {
-                it.text "trackId=1&albumId=2"
-                it.type "application/x-www-form-urlencoded"
-            }
-        }
+    void testPlaylistCrudAndPlayTrack() {
+        def response = addTrack(1, 2, 1000)
         assert response.body.text.empty && response.status.code == 201
 
-        def tracks = app.httpClient.getText('playlist/tracks')
-        assert tracks == '[{"albumId":2,"trackId":1}]'
+        assert tracks == '[]'
 
-        response = app.httpClient.request("playlist/tracks") {
-            it.method "POST"
-            it.body {
-                it.text "trackId=3&albumId=4"
-                it.type "application/x-www-form-urlencoded"
-            }
-        }
+        response = addTrack(3, 4, 5000)
         assert response.body.text.empty && response.status.code == 201
 
-        tracks = app.httpClient.getText('playlist/tracks')
-        assert tracks == '[{"albumId":2,"trackId":1},{"albumId":4,"trackId":3}]'
+        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000}]'
+
+        response = addTrack(5, 6, 3000)
+        assert response.body.text.empty && response.status.code == 201
+
+        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+    }
+
+    @Test
+    void testPlayTrack() {
+        assert [
+                addTrack(1, 2, 1000),
+                addTrack(3, 4, 5000),
+                addTrack(5, 6, 3000)
+        ]*.statusCode == [201] * 3
+
+        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+
+        TimeUnit.SECONDS.sleep(1)
+        assert tracks == '[{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
 }

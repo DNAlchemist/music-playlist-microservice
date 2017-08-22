@@ -34,11 +34,11 @@ class InMemoryPlaylistRepositoryTest {
     @Test
     void addTrack() {
         PlaylistRepository playlist = new InMemoryPlaylistRepository()
-        playlist.addTrack(new Track(albumId: 1, trackId: 2))
-        playlist.addTrack(new Track(albumId: 3, trackId: 4))
+        playlist.addTrack(new Track(albumId: 1, trackId: 2, duration: 5000L))
+        playlist.addTrack(new Track(albumId: 3, trackId: 4, duration: 5000L))
         assert playlist.tracks == [
-                new Track(albumId: 1, trackId: 2),
-                new Track(albumId: 3, trackId: 4)
+                new Track(albumId: 1, trackId: 2, duration: 5000L),
+                new Track(albumId: 3, trackId: 4, duration: 5000L)
         ]
     }
 
