@@ -1,0 +1,16 @@
+apply plugin: 'docker'
+
+task buildDockerImage(type: Docker) {
+    dependsOn shadowJar
+
+    baseImage = 'anapsix/alpine-java'
+    registry = 'chest'
+    applicationName = project.name
+    tagVersion = 'latest'
+    addFile file(project.tasks.shadowJar.archivePath)
+    defaultCommand = ['java', '-jar', file(project.tasks.shadowJar.archivePath).name]
+    exposePort 5050
+}
+
+build.dependsOn buildDockerImage
+

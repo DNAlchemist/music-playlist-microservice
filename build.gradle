@@ -13,13 +13,18 @@ buildscript {
         classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.10.0'
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.1'
         classpath 'io.ratpack:ratpack-gradle:1.4.6'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath 'se.transmode.gradle:gradle-docker:1.2'
+
     }
 }
 
 apply plugin: 'io.ratpack.ratpack-groovy'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 apply from: 'coverage.gradle'
 apply from: 'integTest.gradle'
+apply from: 'docker.gradle'
 apply from: 'license.gradle'
 
 repositories {
