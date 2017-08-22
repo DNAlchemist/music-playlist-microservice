@@ -20,10 +20,10 @@ buildscript {
 }
 
 apply plugin: 'io.ratpack.ratpack-groovy'
-apply plugin: 'com.github.johnrengelman.shadow'
 
 apply from: 'coverage.gradle'
 apply from: 'integTest.gradle'
+apply from: 'shadow.gradle'
 apply from: 'docker.gradle'
 apply from: 'license.gradle'
 
