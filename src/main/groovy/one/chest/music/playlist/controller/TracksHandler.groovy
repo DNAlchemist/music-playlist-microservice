@@ -32,6 +32,7 @@ import ratpack.groovy.handling.GroovyHandler
 import ratpack.jackson.Jackson
 
 import javax.inject.Inject
+import javax.validation.ValidationException
 
 @Slf4j
 @CompileStatic
@@ -66,6 +67,10 @@ class TracksHandler extends GroovyHandler {
                 playlist.addTrack(it as Track)
                 ctx.response.status 201
                 ctx.response.send()
+            } catch (ValidationException validationException) {
+                log.info("Validation constraint violation: ${validationException.message}")
+                ctx.response.status 422
+                ctx.response.send validationException.message ?: "No message"
             } catch (e) {
                 log.error("Request handling error", e)
                 ctx.response.status 500

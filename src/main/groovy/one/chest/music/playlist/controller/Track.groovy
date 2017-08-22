@@ -27,10 +27,16 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
+import javax.validation.constraints.NotNull
+
 @ToString
 @EqualsAndHashCode
 @CompileStatic
 class Track {
+
+    @NotNull
     Integer albumId, trackId
+
+    @NotNull
     Long duration
 }

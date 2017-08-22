@@ -50,6 +50,17 @@ class TracksHandlerTest {
     }
 
     @Test
+    void addTrackValidate() {
+        def response = handle(new TracksHandler(
+                playlist: [:] as PlaylistService
+        )) {
+            method "POST"
+            body "albumId=2&duration=3000", "application/x-www-form-urlencoded"
+        }
+        assert response.bodyText == 'may not be null' && response.status.code == 422
+    }
+
+    @Test
     void getTracks() {
         def response = handle(new TracksHandler(
                 playlist: [getTracks: {

@@ -86,4 +86,16 @@ class MusicLibraryIntegrationTest {
         assert tracks == '[{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
+    @Test
+    void testAddTrackValidation() {
+        def response = app.httpClient.request("playlist/tracks") {
+            it.method "POST"
+            it.body {
+                it.text "albumId=1&trackId=2"
+                it.type "application/x-www-form-urlencoded"
+            }
+        }
+        assert response.statusCode == 422
+    }
+
 }
