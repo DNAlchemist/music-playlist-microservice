@@ -34,6 +34,7 @@ repositories {
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.21'
     compile 'one.chest.ratpack:ratpack-form-parser:0.0.1'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
 
     testCompile 'junit:junit:4.12'
 }
