@@ -48,8 +48,12 @@ class Player implements Runnable {
 
     private ReentrantLock lock = new ReentrantLock()
     private Condition condition = lock.newCondition()
-    private Track currentTrack
+    Track currentTrack
     private AtomicLong currentTrackStartTime = new AtomicLong()
+
+    long getCurrentTrackTimePosition() {
+        return System.currentTimeMillis() - currentTrackStartTime
+    }
 
     @Override
     void run() {
@@ -72,20 +76,19 @@ class Player implements Runnable {
         }
     }
 
-    void playTrack(Track track) {
+    private void playTrack(Track track) {
         try {
             assert track
             currentTrack = track
             currentTrackStartTime.set(System.currentTimeMillis())
             log.info("Playing " + track)
-            while (currentTrackStartTime + track.duration > System.currentTimeMillis()) {
+            while (currentTrackTimePosition <= track.duration) {
                 Thread.sleep(16)
             }
         } catch (InterruptedException ignore) {
             currentThread().interrupt()
         } finally {
-            currentTrack = null
-            currentTrackStartTime.set(0)
+            currentTrackStartTime.set(System.currentTimeMillis())
         }
     }
 
