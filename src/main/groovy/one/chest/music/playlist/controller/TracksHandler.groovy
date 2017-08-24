@@ -68,7 +68,7 @@ class TracksHandler extends GroovyHandler {
                 ctx.response.status 201
                 ctx.response.send()
             } catch (ValidationException validationException) {
-                log.info("Validation constraint violation: ${validationException.message}")
+                log.error("Validation constraint violation: ${validationException.message}")
                 ctx.response.status 422
                 ctx.response.send validationException.message ?: "No message"
             } catch (e) {
