@@ -58,3 +58,11 @@ artifacts {
     archives sourcesJar
     archives javadocJar
 }
+
+import org.apache.tools.ant.filters.ReplaceTokens
+
+processResources {
+    filesMatching('**/application.properties') {
+        filter(ReplaceTokens, tokens: [NAME: project.name, VERSION: project.version])
+    }
+}

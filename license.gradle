@@ -4,4 +4,5 @@ license {
     header file('LICENSE')
     exclude "**/org.codehaus.groovy.runtime.ExtensionModule"
     exclude "**/*.json"
+    exclude "**/*.properties"
 }
