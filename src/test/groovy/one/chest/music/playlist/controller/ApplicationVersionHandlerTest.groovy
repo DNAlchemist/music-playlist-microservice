@@ -23,10 +23,12 @@
  */
 package one.chest.music.playlist.controller
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
 
+@CompileStatic
 class ApplicationVersionHandlerTest {
 
     @Test
