@@ -29,8 +29,8 @@ import groovy.transform.Memoized
 @CompileStatic
 class Application {
 
-    public NAME
-    public VERSION
+    String name
+    String version
 
     @Memoized
     public static Application getInstance() {

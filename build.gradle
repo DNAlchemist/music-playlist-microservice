@@ -63,6 +63,6 @@ import org.apache.tools.ant.filters.ReplaceTokens
 
 processResources {
     filesMatching('**/application.properties') {
-        filter(ReplaceTokens, tokens: [NAME: project.name, VERSION: project.version])
+        filter(ReplaceTokens, tokens: [name: project.name, version: project.version])
     }
 }

@@ -21,39 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+package one.chest.music.playlist.controller
 
-import com.google.inject.Scopes
-import one.chest.music.playlist.controller.ApplicationVersionHandler
-import one.chest.music.playlist.controller.CurrentTrackHandler
-import one.chest.music.playlist.controller.HealthHandler
-import one.chest.music.playlist.controller.TracksHandler
-import one.chest.music.playlist.repository.inmemory.InMemoryGuiceModule
-import one.chest.music.playlist.service.PlaylistService
+import org.junit.Test
 
-import static ratpack.groovy.Groovy.ratpack
-import static ratpack.handling.RequestLogger.ncsa
+import static ratpack.groovy.test.handling.GroovyRequestFixture.handle
 
-ratpack {
+class ApplicationVersionHandlerTest {
 
-    bindings {
-        module InMemoryGuiceModule
-        module { binder ->
-            binder.bind(PlaylistService).in(Scopes.SINGLETON)
-        }
-        module {
-            bind HealthHandler
-            bind ApplicationVersionHandler
-            bind TracksHandler
-            bind CurrentTrackHandler
-        }
-    }
-
-    handlers {
-        all ncsa()
-        get "health", HealthHandler
-        get "version", ApplicationVersionHandler
-
-        path "playlist/tracks", TracksHandler
-        get "playlist/tracks/current", CurrentTrackHandler
+    @Test
+    void version() {
+        def response = handle(new ApplicationVersionHandler(), {})
+        assert response.bodyText == "application-version"
     }
 }
