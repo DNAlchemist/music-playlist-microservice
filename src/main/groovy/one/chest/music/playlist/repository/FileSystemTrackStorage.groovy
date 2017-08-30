@@ -24,9 +24,11 @@
 package one.chest.music.playlist.repository
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import java.nio.file.Path
 
+@Slf4j
 @CompileStatic
 class FileSystemTrackStorage implements TrackStorage {
 
@@ -34,6 +36,7 @@ class FileSystemTrackStorage implements TrackStorage {
 
     FileSystemTrackStorage(Path directory) {
         assert directory.toFile().exists()
+        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
         this.directory = directory
     }
 
