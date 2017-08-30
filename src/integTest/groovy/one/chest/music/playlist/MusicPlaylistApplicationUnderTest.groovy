@@ -21,26 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.controller
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
-import one.chest.music.playlist.service.PlaylistService
-import ratpack.groovy.handling.GroovyContext
-import ratpack.groovy.handling.GroovyHandler
+import one.chest.music.playlist.repository.FileSystemTrackStorage
+import one.chest.music.playlist.repository.TrackStorage
+import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import ratpack.impose.ImpositionsSpec
 
-import javax.inject.Inject
+import java.nio.file.Path
 
-import static ratpack.jackson.Jackson.json
+import static ratpack.guice.Guice.registry
+import static ratpack.impose.UserRegistryImposition.of
 
 @CompileStatic
-class CurrentTrackHandler extends GroovyHandler {
+class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnderTest {
 
-    @Inject
-    PlaylistService playlist
+    private Path temporaryFolder
+
+    MusicPlaylistApplicationUnderTest(Path temporaryFolder) {
+        this.temporaryFolder = temporaryFolder
+    }
 
     @Override
-    protected void handle(GroovyContext ctx) {
-        ctx.render json(track: playlist.playableTrack.track, position: playlist.playableTrack.timePosition)
+    protected void addImpositions(ImpositionsSpec impositions) {
+        impositions.add(of(
+                registry {
+                    it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
+                }
+        ))
     }
 
 }

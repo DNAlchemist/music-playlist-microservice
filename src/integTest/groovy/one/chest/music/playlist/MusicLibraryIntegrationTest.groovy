@@ -24,7 +24,10 @@
 package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
 import ratpack.http.client.ReceivedResponse
 
@@ -33,7 +36,15 @@ import java.util.concurrent.TimeUnit
 @CompileStatic
 class MusicLibraryIntegrationTest {
 
-    private GroovyRatpackMainApplicationUnderTest app = new GroovyRatpackMainApplicationUnderTest()
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder()
+
+    GroovyRatpackMainApplicationUnderTest app
+
+    @Before
+    void setUp() {
+        app = new MusicPlaylistApplicationUnderTest(temporaryFolder.root.toPath())
+    }
 
     @Test
     void testHealth() {

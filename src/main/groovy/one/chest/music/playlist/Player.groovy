@@ -27,9 +27,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import one.chest.music.playlist.controller.Track
 import one.chest.music.playlist.repository.PlaylistRepository
+import one.chest.music.playlist.repository.TrackStorage
 
 import javax.inject.Inject
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
@@ -40,20 +40,18 @@ import static java.lang.Thread.currentThread
 class Player implements Runnable {
 
     private final PlaylistRepository playlist
+    private final TrackStorage trackStorage
 
     @Inject
-    Player(PlaylistRepository playlist) {
+    Player(PlaylistRepository playlist, TrackStorage trackStorage) {
         this.playlist = playlist
+        this.trackStorage = trackStorage
     }
 
     private ReentrantLock lock = new ReentrantLock()
     private Condition condition = lock.newCondition()
-    Track currentTrack
-    private AtomicLong currentTrackStartTime = new AtomicLong()
 
-    long getCurrentTrackTimePosition() {
-        return System.currentTimeMillis() - currentTrackStartTime
-    }
+    PlayableTrack playableTrack
 
     @Override
     void run() {
@@ -78,17 +76,14 @@ class Player implements Runnable {
 
     private void playTrack(Track track) {
         try {
-            assert track
-            currentTrack = track
-            currentTrackStartTime.set(System.currentTimeMillis())
+            playableTrack = new PlayableTrack(trackStorage, track)
+            playableTrack.play()
             log.info("Playing " + track)
-            while (currentTrackTimePosition <= track.duration) {
+            while (!playableTrack.played) {
                 Thread.sleep(16)
             }
         } catch (InterruptedException ignore) {
             currentThread().interrupt()
-        } finally {
-            currentTrackStartTime.set(System.currentTimeMillis())
         }
     }
 
