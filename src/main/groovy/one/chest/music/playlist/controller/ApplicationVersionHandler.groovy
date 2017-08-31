@@ -24,10 +24,12 @@
 package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import one.chest.music.playlist.Application
 import ratpack.groovy.handling.GroovyContext
 import ratpack.groovy.handling.GroovyHandler
 
+@Slf4j
 @CompileStatic
 class ApplicationVersionHandler extends GroovyHandler {
 
@@ -35,6 +37,13 @@ class ApplicationVersionHandler extends GroovyHandler {
 
     @Override
     protected void handle(GroovyContext ctx) {
-        ctx.response.send app.version
+        try {
+            ctx.response.send app.version
+        } catch (e) {
+            log.error("Request handling error", e)
+            ctx.response.status 500
+            ctx.response.send e.message ?: "No message"
+        }
+
     }
 }
