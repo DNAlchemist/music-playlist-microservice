@@ -118,6 +118,9 @@ class Player implements Runnable {
     void addTrack(Track track) {
         try {
             lock.lock()
+            if (!trackStorage.isTrackExists(track.albumId, track.trackId)) {
+                throw new NoSuchTrackException(track.albumId, track.trackId)
+            }
             playlist.addTrack(track)
             log.info("Track ${track} added to playlist")
             condition.signal()
