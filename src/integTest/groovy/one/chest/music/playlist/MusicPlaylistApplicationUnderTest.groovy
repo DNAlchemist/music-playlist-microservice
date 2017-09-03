@@ -27,12 +27,10 @@ import groovy.transform.CompileStatic
 import one.chest.music.playlist.repository.FileSystemTrackStorage
 import one.chest.music.playlist.repository.TrackStorage
 import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import ratpack.guice.BindingsImposition
 import ratpack.impose.ImpositionsSpec
 
 import java.nio.file.Path
-
-import static ratpack.guice.Guice.registry
-import static ratpack.impose.UserRegistryImposition.of
 
 @CompileStatic
 class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnderTest {
@@ -45,11 +43,9 @@ class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnde
 
     @Override
     protected void addImpositions(ImpositionsSpec impositions) {
-        impositions.add(of(
-                registry {
-                    it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
-                }
-        ))
+        impositions.add(BindingsImposition.of({
+            it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
+        }))
     }
 
 }
