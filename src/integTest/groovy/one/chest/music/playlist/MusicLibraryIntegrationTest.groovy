@@ -44,6 +44,9 @@ class MusicLibraryIntegrationTest {
     @Before
     void setUp() {
         app = new MusicPlaylistApplicationUnderTest(temporaryFolder.root.toPath())
+        temporaryFolder.newFile('1.2').bytes = 0..1025 as byte[]
+        temporaryFolder.newFile('3.4')
+        temporaryFolder.newFile('5.6')
     }
 
     @Test
@@ -125,6 +128,20 @@ class MusicLibraryIntegrationTest {
 
         TimeUnit.SECONDS.sleep(1)
         assert currentTrack ==~ /\{"track":\{"albumId":3,"trackId":4,"duration":5000\},"position":\d{1,3}\}/
+    }
+
+    @Test
+    void testStream() {
+        assert addTrack(1, 2, 5000).statusCode == 201
+        def response = app.httpClient.get("playlist/tracks/stream")
+        assert response.statusCode == 200
+
+        def was = response.body.bytes
+        assert was.length > 1025
+
+        def expected = 0..1025 as byte[]
+
+        assert was[0..1025] as byte[] == expected
     }
 
 

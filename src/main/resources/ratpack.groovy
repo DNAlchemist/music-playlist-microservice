@@ -24,10 +24,7 @@
 
 
 import com.google.inject.Scopes
-import one.chest.music.playlist.controller.ApplicationVersionHandler
-import one.chest.music.playlist.controller.CurrentTrackHandler
-import one.chest.music.playlist.controller.HealthHandler
-import one.chest.music.playlist.controller.TracksHandler
+import one.chest.music.playlist.controller.*
 import one.chest.music.playlist.repository.FileSystemTrackStorage
 import one.chest.music.playlist.repository.TrackStorage
 import one.chest.music.playlist.repository.inmemory.InMemoryGuiceModule
@@ -50,6 +47,7 @@ ratpack {
         }
         module {
             bind HealthHandler
+            bind StreamTrackHandler
             bind ApplicationVersionHandler
             bind TracksHandler
             bind CurrentTrackHandler
@@ -63,6 +61,7 @@ ratpack {
 
         path "playlist/tracks", TracksHandler
         get "playlist/tracks/current", CurrentTrackHandler
+        get "playlist/tracks/stream", StreamTrackHandler
     }
 }
 

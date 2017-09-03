@@ -25,11 +25,19 @@ package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
 import one.chest.music.playlist.controller.Track
+import one.chest.music.playlist.repository.NoSuchTrackException
 import one.chest.music.playlist.repository.PlaylistRepository
 import one.chest.music.playlist.repository.TrackStorage
+import org.reactivestreams.Publisher
+import org.reactivestreams.Subscriber
+import org.reactivestreams.Subscription
+import ratpack.func.Action
 
 import javax.inject.Inject
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
@@ -71,6 +79,26 @@ class Player implements Runnable {
             return playlist.poll()
         } finally {
             lock.unlock()
+        }
+    }
+
+    Publisher<ByteBuf> broadcast(Action<Throwable> onError) {
+        return { Subscriber<ByteBuf> s ->
+            try {
+                broadcastTrack(s, playableTrack)
+            } catch (Throwable e) {
+                onError.execute(e)
+            } finally {
+                s.onComplete()
+            }
+        } as Publisher<ByteBuf>
+    }
+
+    private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack) {
+        s.onSubscribe([request: { l -> }, cancel: {}] as Subscription)
+        Queue<ByteBuf> stack = new ConcurrentLinkedQueue<>(playableTrack.buffer)
+        while (!playableTrack.loaded || !stack.empty) {
+            s.onNext(Unpooled.copiedBuffer(stack.poll().array()))
         }
     }
 
