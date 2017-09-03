@@ -47,6 +47,7 @@ class FileSystemTrackStorage implements TrackStorage {
 
     @Override
     public InputStream getTrackInputStream(int albumId, int trackId) {
+        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
         checkTrackExists(albumId, trackId)
         return directory.resolve("${albumId}.${trackId}").newInputStream()
     }
