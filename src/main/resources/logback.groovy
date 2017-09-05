@@ -43,3 +43,4 @@ appender("LOGSTASH", LogstashTcpSocketAppender) {
 }
 
 logger("one.chest.music.playlist", DEBUG, ["CONSOLE", "LOGSTASH"], false)
+logger("ratpack.server", WARN, ["CONSOLE", "LOGSTASH"], false)

@@ -34,7 +34,6 @@ import one.chest.music.playlist.repository.TrackStorage
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
-import ratpack.func.Action
 
 import javax.inject.Inject
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -105,7 +104,7 @@ class Player implements Runnable {
         }
     }
 
-    Publisher<ByteBuf> broadcast(Action<Throwable> onError) {
+    Publisher<ByteBuf> broadcast() {
         return { Subscriber<ByteBuf> s ->
             try {
                 s.onSubscribe([request: { l -> }, cancel: {}] as Subscription)
@@ -117,7 +116,7 @@ class Player implements Runnable {
                 }
 
             } catch (Throwable e) {
-                onError.execute(e)
+                s.onError(e)
             } finally {
                 s.onComplete()
             }

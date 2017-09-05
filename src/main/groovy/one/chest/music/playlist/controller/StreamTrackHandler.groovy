@@ -42,11 +42,7 @@ class StreamTrackHandler extends GroovyHandler {
     protected void handle(GroovyContext ctx) {
         try {
             ctx.response.contentType 'audio/mpeg'
-            ctx.response.sendStream playlist.broadcast { Throwable e ->
-                log.error("Streaming error", e)
-                ctx.response.status 500
-                ctx.response.send e.message ?: "No message"
-            }
+            ctx.response.sendStream playlist.broadcast()
         } catch (e) {
             log.error("Request handling error", e)
             ctx.response.status 500
