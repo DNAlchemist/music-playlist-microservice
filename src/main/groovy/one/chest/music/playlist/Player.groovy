@@ -37,6 +37,7 @@ import org.reactivestreams.Subscription
 
 import javax.inject.Inject
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
@@ -48,11 +49,13 @@ class Player implements Runnable {
 
     private final PlaylistRepository playlist
     private final TrackStorage trackStorage
+    private final PlayerConfiguration configuration
 
     @Inject
-    Player(PlaylistRepository playlist, TrackStorage trackStorage) {
+    Player(PlaylistRepository playlist, TrackStorage trackStorage, PlayerConfiguration configuration) {
         this.playlist = playlist
         this.trackStorage = trackStorage
+        this.configuration = configuration
     }
 
     private ReentrantLock lock = new ReentrantLock()
@@ -107,14 +110,19 @@ class Player implements Runnable {
     Publisher<ByteBuf> broadcast() {
         return { Subscriber<ByteBuf> s ->
             try {
-                s.onSubscribe([request: { l -> }, cancel: {}] as Subscription)
+                AtomicBoolean requestCanceled = new AtomicBoolean()
+                s.onSubscribe([request: { l -> }, cancel: { requestCanceled.set(true) }] as Subscription)
 
                 Queue<PlayableTrack> tracks = new ConcurrentLinkedQueue(playableTracks)
-                while (!tracks.empty) {
-                    PlayableTrack track = tracks.poll()
-                    broadcastTrack(s, track)
+                while (!requestCanceled.get()) {
+                    while (!tracks.empty) {
+                        PlayableTrack track = tracks.poll()
+                        broadcastTrack(s, track, requestCanceled)
+                    }
+                    if (!configuration.holdConnection) {
+                        break
+                    }
                 }
-
             } catch (Throwable e) {
                 s.onError(e)
             } finally {
@@ -123,9 +131,9 @@ class Player implements Runnable {
         } as Publisher<ByteBuf>
     }
 
-    private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack) {
+    private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack, AtomicBoolean canceled) {
         Queue<ByteBuf> stack = new ConcurrentLinkedQueue<>(playableTrack.buffer)
-        while (!playableTrack.loaded || !stack.empty) {
+        while (!canceled.get() && (!playableTrack.loaded || !stack.empty)) {
             s.onNext(Unpooled.copiedBuffer(stack.poll().array()))
         }
     }

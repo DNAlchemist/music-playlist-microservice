@@ -23,32 +23,9 @@
  */
 package one.chest.music.playlist
 
-import groovy.transform.CompileStatic
-import one.chest.music.playlist.repository.FileSystemTrackStorage
-import one.chest.music.playlist.repository.TrackStorage
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
-import ratpack.guice.BindingsImposition
-import ratpack.impose.ImpositionsSpec
-
-import java.nio.file.Path
+import groovy.transform.CompileStatic;
 
 @CompileStatic
-class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnderTest {
-
-    private Path temporaryFolder
-
-    MusicPlaylistApplicationUnderTest(Path temporaryFolder) {
-        this.temporaryFolder = temporaryFolder
-    }
-
-    @Override
-    protected void addImpositions(ImpositionsSpec impositions) {
-        impositions.add(BindingsImposition.of({
-            it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
-            it.bindInstance(PlayerConfiguration, [
-                    holdConnection: false
-            ] as PlayerConfiguration)
-        }))
-    }
-
+class PlayerConfiguration {
+    def holdConnection = true
 }
