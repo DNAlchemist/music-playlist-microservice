@@ -35,5 +35,5 @@ interface PlaylistRepository {
 
     boolean isEmpty()
 
-    Track poll()
+    Track remove()
 }

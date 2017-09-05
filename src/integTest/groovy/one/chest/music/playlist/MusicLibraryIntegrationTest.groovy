@@ -77,31 +77,31 @@ class MusicLibraryIntegrationTest {
         def response = addTrack(1, 2, 1000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000}]'
 
         response = addTrack(3, 4, 5000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000},{"albumId":3,"trackId":4,"duration":5000}]'
 
         response = addTrack(5, 6, 3000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
     @Test
     void testPlayTrack() {
         assert [
-                addTrack(1, 2, 1000),
+                addTrack(1, 2, 500),
                 addTrack(3, 4, 5000),
                 addTrack(5, 6, 3000)
         ]*.statusCode == [201] * 3
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":500},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
 
         TimeUnit.SECONDS.sleep(1)
-        assert tracks == '[{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
     @Test
@@ -119,12 +119,12 @@ class MusicLibraryIntegrationTest {
     @Test
     void testCheckCurrentTrack() {
         assert [
-                addTrack(1, 2, 1000),
+                addTrack(1, 2, 500),
                 addTrack(3, 4, 5000),
                 addTrack(5, 6, 3000)
         ]*.statusCode == [201] * 3
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":500},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
 
         TimeUnit.SECONDS.sleep(1)
         assert currentTrack ==~ /\{"track":\{"albumId":3,"trackId":4,"duration":5000\},"position":\d{1,3}\}/

@@ -50,7 +50,7 @@ class InMemoryPlaylistRepository implements PlaylistRepository {
     }
 
     @Override
-    Track poll() {
-        return playlist.poll()
+    Track remove() {
+        return playlist.remove()
     }
 }

@@ -59,15 +59,38 @@ class Player implements Runnable {
     private ReentrantLock lock = new ReentrantLock()
     private Condition condition = lock.newCondition()
 
-    PlayableTrack playableTrack
+    Queue<PlayableTrack> playableTracks = new ConcurrentLinkedQueue()
+    private int playableTracksQueueSize = 3
 
     @Override
     void run() {
         log.info("Player thread started as ${currentThread().name}")
         while (!currentThread().interrupted) {
-            playTrack(fetchTrack())
+            nextTrack()
+            playTrack()
         }
         log.info("Thread ${currentThread().name} is interrupted")
+    }
+
+    private void nextTrack() {
+        PlayableTrack oldTrack = playableTracks.poll()
+        if (playableTracks.empty) {
+            playableTracks << new PlayableTrack(trackStorage, fetchTrack())
+            log.info((oldTrack ? "${oldTrack.track} is done, " : "") + "${playableTracks.peek().track} now playing")
+        }
+    }
+
+    private void loadTracks() {
+        if (!lock.locked) {
+            log.debug("Fill playable tracks queue")
+            for (int i = 0; i < playableTracksQueueSize && !playlist.empty; i++) {
+                Track track = playlist.remove()
+                log.debug("Add ${track} to loading")
+                PlayableTrack playableTrack = new PlayableTrack(trackStorage, track)
+                playableTrack.loadResourceAsync()
+                playableTracks << playableTrack
+            }
+        }
     }
 
     private Track fetchTrack() {
@@ -76,7 +99,7 @@ class Player implements Runnable {
             if (playlist.isEmpty()) {
                 condition.await()
             }
-            return playlist.poll()
+            return playlist.remove()
         } finally {
             lock.unlock()
         }
@@ -85,7 +108,14 @@ class Player implements Runnable {
     Publisher<ByteBuf> broadcast(Action<Throwable> onError) {
         return { Subscriber<ByteBuf> s ->
             try {
-                broadcastTrack(s, playableTrack)
+                s.onSubscribe([request: { l -> }, cancel: {}] as Subscription)
+
+                Queue<PlayableTrack> tracks = new ConcurrentLinkedQueue(playableTracks)
+                while (!tracks.empty) {
+                    PlayableTrack track = tracks.poll()
+                    broadcastTrack(s, track)
+                }
+
             } catch (Throwable e) {
                 onError.execute(e)
             } finally {
@@ -95,18 +125,17 @@ class Player implements Runnable {
     }
 
     private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack) {
-        s.onSubscribe([request: { l -> }, cancel: {}] as Subscription)
         Queue<ByteBuf> stack = new ConcurrentLinkedQueue<>(playableTrack.buffer)
         while (!playableTrack.loaded || !stack.empty) {
             s.onNext(Unpooled.copiedBuffer(stack.poll().array()))
         }
     }
 
-    private void playTrack(Track track) {
+    private void playTrack() {
         try {
-            playableTrack = new PlayableTrack(trackStorage, track)
+            PlayableTrack playableTrack = playableTracks.peek()
             playableTrack.play()
-            log.info("Playing " + track)
+            log.info("Playing " + playableTrack.track)
             while (!playableTrack.played) {
                 Thread.sleep(16)
             }
@@ -124,12 +153,13 @@ class Player implements Runnable {
             playlist.addTrack(track)
             log.info("Track ${track} added to playlist")
             condition.signal()
+            loadTracks()
         } finally {
             lock.unlock()
         }
     }
 
     Collection<Track> getTracks() {
-        return playlist.tracks
+        return playableTracks*.track + playlist.tracks
     }
 }

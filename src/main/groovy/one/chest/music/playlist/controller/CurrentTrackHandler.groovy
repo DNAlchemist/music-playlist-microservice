@@ -25,6 +25,7 @@ package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import one.chest.music.playlist.PlayableTrack
 import one.chest.music.playlist.service.PlaylistService
 import ratpack.groovy.handling.GroovyContext
 import ratpack.groovy.handling.GroovyHandler
@@ -43,7 +44,8 @@ class CurrentTrackHandler extends GroovyHandler {
     @Override
     protected void handle(GroovyContext ctx) {
         try {
-            ctx.render json(track: playlist.playableTrack?.track, position: playlist.playableTrack?.timePosition)
+            PlayableTrack playableTrack = playlist.playableTracks.peek()
+            ctx.render json(track: playableTrack?.track, position: playableTrack?.timePosition)
         } catch (e) {
             log.error("Request handling error", e)
             ctx.response.status 500
