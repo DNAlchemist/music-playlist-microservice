@@ -28,7 +28,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
 import ratpack.http.client.ReceivedResponse
 
 import java.util.concurrent.TimeUnit
@@ -39,7 +38,7 @@ class MusicLibraryIntegrationTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder()
 
-    GroovyRatpackMainApplicationUnderTest app
+    MusicPlaylistApplicationUnderTest app
 
     @Before
     void setUp() {
@@ -133,6 +132,10 @@ class MusicLibraryIntegrationTest {
     @Test
     void testStream() {
         assert addTrack(1, 2, 5000).statusCode == 201
+
+        Thread.start {
+            app.releaseStreamConnectionAfter(500)
+        }
         def response = app.httpClient.get("playlist/tracks/stream")
         assert response.statusCode == 200
 

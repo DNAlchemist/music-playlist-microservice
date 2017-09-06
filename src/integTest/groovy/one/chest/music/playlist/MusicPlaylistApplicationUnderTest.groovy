@@ -37,6 +37,10 @@ class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnde
 
     private Path temporaryFolder
 
+    final PlayerConfiguration playerConfiguration = [
+            holdConnection: true
+    ] as PlayerConfiguration
+
     MusicPlaylistApplicationUnderTest(Path temporaryFolder) {
         this.temporaryFolder = temporaryFolder
     }
@@ -45,10 +49,14 @@ class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnde
     protected void addImpositions(ImpositionsSpec impositions) {
         impositions.add(BindingsImposition.of({
             it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
-            it.bindInstance(PlayerConfiguration, [
-                    holdConnection: false
-            ] as PlayerConfiguration)
+            it.bindInstance(PlayerConfiguration, playerConfiguration)
         }))
+    }
+
+    def releaseStreamConnectionAfter(long mills) {
+        synchronized (playerConfiguration) {
+            playerConfiguration.holdConnection = false
+        }
     }
 
 }
