@@ -44,7 +44,7 @@ class MusicLibraryIntegrationTest {
     void setUp() {
         app = new MusicPlaylistApplicationUnderTest(temporaryFolder.root.toPath())
         temporaryFolder.newFile('1.2').bytes = 0..1025 as byte[]
-        temporaryFolder.newFile('3.4')
+        temporaryFolder.newFile('3.4').bytes = 0..128 as byte[]
         temporaryFolder.newFile('5.6')
     }
 
@@ -134,7 +134,7 @@ class MusicLibraryIntegrationTest {
         assert addTrack(1, 2, 5000).statusCode == 201
 
         Thread.start {
-            app.releaseStreamConnectionAfter(500)
+            app.releaseStreamConnectionAfter(100)
         }
         def response = app.httpClient.get("playlist/tracks/stream")
         assert response.statusCode == 200
@@ -145,7 +145,50 @@ class MusicLibraryIntegrationTest {
         def expected = 0..1025 as byte[]
 
         assert was[0..1025] as byte[] == expected
+
+        def wasTail = was[1026..-1] as byte[]
+        assert wasTail == ([0] * wasTail.length) as byte[]
     }
 
+
+    @Test
+    void testAppendWhenConnectionHolden() {
+        assert addTrack(1, 2, 500).statusCode == 201
+
+        Thread.start {
+            Thread.sleep(50)
+            addTrack(3, 4, 500).statusCode == 201
+            app.releaseStreamConnectionAfter(500)
+        }
+        def response = app.httpClient.get("playlist/tracks/stream")
+        assert response.statusCode == 200
+
+        def was = response.body.bytes
+        assert was.length > 1153
+
+        def expectedFirstPart = (0..1025) as byte[]
+        def expectedSecondPart = (1..128) as byte[]
+
+        assert was[0..1025] as byte[] == expectedFirstPart
+        def trimmedArray = trimArray(was[1026..-1] as byte[])
+        assert trimmedArray == expectedSecondPart
+    }
+
+    private static byte[] trimArray(byte[] bytes) {
+        int start = 0, end = bytes.length - 1
+        for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] != 0) {
+                start = i
+                break
+            }
+        }
+        for (int i = bytes.length - 1; i >= 0; i--) {
+            if (bytes[i] != 0) {
+                end = i
+                break
+            }
+        }
+        return bytes[start..end] as byte[]
+    }
 
 }

@@ -31,6 +31,7 @@ import one.chest.music.playlist.controller.Track
 import one.chest.music.playlist.repository.NoSuchTrackException
 import one.chest.music.playlist.repository.TrackStorage
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -48,7 +49,9 @@ class PlayableTrack {
     private int bufferEntrySize = 1024
 
     private Thread downloader
-    AtomicBoolean loadComplete = new AtomicBoolean()
+    final AtomicBoolean loadComplete = new AtomicBoolean()
+
+    private final Map<Object, Closure<?>> onLoadBuf = new ConcurrentHashMap<>()
 
     PlayableTrack(TrackStorage trackStorage, Track track) {
         this.storage = trackStorage
@@ -62,12 +65,12 @@ class PlayableTrack {
     }
 
     void loadResourceAsync() {
-        this.downloader = Thread.start(this.&loadResource)
+        if (!loaded)
+            this.downloader = Thread.start(this.&loadResource)
     }
 
     void play() {
-        if (!loaded)
-            loadResourceAsync()
+        loadResourceAsync()
         startTime.set(System.currentTimeMillis())
     }
 
@@ -83,23 +86,46 @@ class PlayableTrack {
         return System.currentTimeMillis() - startTime
     }
 
+    Deliverer<ByteBuf> deliverer() {
+        return new Deliverer<ByteBuf>(buffer, onLoadBuf)
+    }
+
     void loadResource() {
         try {
-            log.info("Track ${track}: downloading started")
-            storage
-                    .getTrackInputStream(track.albumId, track.trackId)
-                    .withCloseable { is ->
-                byte[] bytes = new byte[bufferEntrySize]
-                while (is.read(bytes) != -1) {
-                    buffer << Unpooled.copiedBuffer(bytes)
-                    log.trace("New entry. Buffer size: ${buffer.size()} * ${bufferEntrySize}")
-                    bytes = new byte[bufferEntrySize]
+            if (loaded)
+                return
+
+            synchronized (loadComplete) {
+                if (!loaded) {
+                    log.info("Track ${track}: downloading started")
+                    storage
+                            .getTrackInputStream(track.albumId, track.trackId)
+                            .withCloseable { is ->
+                        byte[] bytes = new byte[bufferEntrySize]
+                        while (is.read(bytes) != -1) {
+                            def part = Unpooled.copiedBuffer(bytes)
+                            buffer << part
+                            sendToSubscribers(part)
+                            log.trace("New entry. Buffer size: ${buffer.size()} * ${bufferEntrySize}")
+                            bytes = new byte[bufferEntrySize]
+                        }
+                    }
+                    loadComplete.compareAndSet(false, true)
+                    log.info("Track ${track}: downloading completed")
                 }
             }
-            loadComplete.compareAndSet(false, true)
-            log.info("Track ${track}: downloading completed")
         } catch (NoSuchTrackException e) {
             log.error(e.message, e)
+        }
+    }
+
+    private void sendToSubscribers(ByteBuf byteBuf) {
+        onLoadBuf.each { k, func ->
+            try {
+                func(byteBuf)
+            } catch (e) {
+                log.error("Error while sending buffer to subscriber", e)
+            }
         }
     }
 }

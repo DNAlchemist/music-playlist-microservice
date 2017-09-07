@@ -28,18 +28,13 @@ import groovy.util.logging.Slf4j
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import one.chest.music.playlist.controller.Track
-import one.chest.music.playlist.repository.NoSuchTrackException
-import one.chest.music.playlist.repository.PlaylistRepository
-import one.chest.music.playlist.repository.TrackStorage
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
 
 import javax.inject.Inject
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.Condition
-import java.util.concurrent.locks.ReentrantLock
 
 import static java.lang.Thread.currentThread
 
@@ -47,81 +42,66 @@ import static java.lang.Thread.currentThread
 @CompileStatic
 class Player implements Runnable {
 
-    private final PlaylistRepository playlist
-    private final TrackStorage trackStorage
+    private final Playlist playlist
     private final PlayerConfiguration configuration
 
     @Inject
-    Player(PlaylistRepository playlist, TrackStorage trackStorage, PlayerConfiguration configuration) {
+    Player(Playlist playlist, PlayerConfiguration configuration) {
         this.playlist = playlist
-        this.trackStorage = trackStorage
         this.configuration = configuration
     }
-
-    private ReentrantLock lock = new ReentrantLock()
-    private Condition condition = lock.newCondition()
-
-    Queue<PlayableTrack> playableTracks = new ConcurrentLinkedQueue()
-    private int playableTracksQueueSize = 3
 
     @Override
     void run() {
         log.info("Player thread started as ${currentThread().name}")
         while (!currentThread().interrupted) {
-            nextTrack()
             playTrack()
         }
         log.info("Thread ${currentThread().name} is interrupted")
     }
 
-    private void nextTrack() {
-        PlayableTrack oldTrack = playableTracks.poll()
-        if (playableTracks.empty) {
-            playableTracks << new PlayableTrack(trackStorage, fetchTrack())
-            log.info((oldTrack ? "${oldTrack.track} is done, " : "") + "${playableTracks.peek().track} now playing")
-        }
+    void addTrack(Track track) {
+        playlist.addTrack(track)
     }
 
-    private void loadTracks() {
-        if (!lock.locked) {
-            log.debug("Fill playable tracks queue")
-            for (int i = 0; i < playableTracksQueueSize && !playlist.empty; i++) {
-                Track track = playlist.remove()
-                log.debug("Add ${track} to loading")
-                PlayableTrack playableTrack = new PlayableTrack(trackStorage, track)
-                playableTrack.loadResourceAsync()
-                playableTracks << playableTrack
-            }
-        }
+    Collection<Track> getTracks() {
+        return playlist.tracks
     }
 
-    private Track fetchTrack() {
-        try {
-            lock.lock()
-            if (playlist.isEmpty()) {
-                condition.await()
-            }
-            return playlist.remove()
-        } finally {
-            lock.unlock()
-        }
+    PlayableTrack currentTrack() {
+        return playlist.peek()
     }
 
     Publisher<ByteBuf> broadcast() {
         return { Subscriber<ByteBuf> s ->
             try {
-                AtomicBoolean requestCanceled = new AtomicBoolean()
-                s.onSubscribe([request: { l -> }, cancel: { requestCanceled.set(true) }] as Subscription)
+                playlist.deliverer().withCloseable { deliverer ->
+                    Queue<PlayableTrack> tracks = deliverer.pack
+                    AtomicBoolean requestCanceled = new AtomicBoolean()
+                    log.debug("Client connected")
 
-                Queue<PlayableTrack> tracks = new ConcurrentLinkedQueue(playableTracks)
-                while (!requestCanceled.get()) {
-                    while (!tracks.empty) {
-                        PlayableTrack track = tracks.poll()
-                        broadcastTrack(s, track, requestCanceled)
+                    s.onSubscribe([request: { l -> }, cancel: {
+                        log.trace("Request canceled")
+                        requestCanceled.set(true)
+                    }] as Subscription)
+
+                    while (!requestCanceled.get()) {
+                        while (!tracks.empty) {
+                            broadcastTrack(s, tracks.poll(), requestCanceled)
+                        }
+                        if (!configuration.holdConnection) {
+                            break
+                        }
+                        try {
+                            log.debug("Park thread. Waiting for adding tracks")
+                            playlist.lock.lock()
+                            if (tracks.empty)
+                                playlist.loadTracks.await(5, TimeUnit.SECONDS)
+                        } finally {
+                            playlist.lock.unlock()
+                        }
                     }
-                    if (!configuration.holdConnection) {
-                        break
-                    }
+                    log.debug("Client disconnected")
                 }
             } catch (Throwable e) {
                 s.onError(e)
@@ -132,41 +112,30 @@ class Player implements Runnable {
     }
 
     private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack, AtomicBoolean canceled) {
-        Queue<ByteBuf> stack = new ConcurrentLinkedQueue<>(playableTrack.buffer)
-        while (!canceled.get() && (!playableTrack.loaded || !stack.empty)) {
-            s.onNext(Unpooled.copiedBuffer(stack.poll().array()))
+        playableTrack.deliverer().withCloseable { deliverer ->
+            Queue<ByteBuf> stack = deliverer.pack
+            ByteBuf buf
+            while (!canceled.get() && (!playableTrack.loaded || (buf = stack.poll()) != null)) {
+                if (buf) {
+                    log.trace("Sending ${buf}")
+                    s.onNext(Unpooled.copiedBuffer(buf.array()))
+                }
+            }
         }
+
     }
 
     private void playTrack() {
         try {
-            PlayableTrack playableTrack = playableTracks.peek()
+            PlayableTrack playableTrack = playlist.fetch()
             playableTrack.play()
             log.info("Playing " + playableTrack.track)
             while (!playableTrack.played) {
                 Thread.sleep(16)
             }
+            playlist.remove()
         } catch (InterruptedException ignore) {
             currentThread().interrupt()
         }
-    }
-
-    void addTrack(Track track) {
-        try {
-            lock.lock()
-            if (!trackStorage.isTrackExists(track.albumId, track.trackId)) {
-                throw new NoSuchTrackException(track.albumId, track.trackId)
-            }
-            playlist.addTrack(track)
-            log.info("Track ${track} added to playlist")
-            condition.signal()
-            loadTracks()
-        } finally {
-            lock.unlock()
-        }
-    }
-
-    Collection<Track> getTracks() {
-        return playableTracks*.track + playlist.tracks
     }
 }

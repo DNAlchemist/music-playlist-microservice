@@ -55,6 +55,7 @@ class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnde
 
     def releaseStreamConnectionAfter(long mills) {
         synchronized (playerConfiguration) {
+            Thread.sleep(mills)
             playerConfiguration.holdConnection = false
         }
     }

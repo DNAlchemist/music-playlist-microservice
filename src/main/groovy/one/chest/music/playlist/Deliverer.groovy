@@ -21,19 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
-import one.chest.music.playlist.controller.Track
+import groovy.transform.Memoized
+import groovy.transform.TupleConstructor
+import groovy.util.logging.Slf4j
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
+@Slf4j
+@TupleConstructor
 @CompileStatic
-interface PlaylistRepository {
+class Deliverer<T> implements Closeable {
 
-    void addTrack(Track track)
+    Queue<T> queue
+    Map<Object, Closure<?>> onLoad
 
-    Collection<Track> getTracks()
+    @Memoized
+    Queue<T> getPack() {
+        def queue = new ConcurrentLinkedQueue(queue)
+        onLoad.put(this, { T pack ->
+            log.debug("Subscriber received the package: " + pack)
+            queue << pack
+        })
+        return queue
+    }
 
-    boolean isEmpty()
-
-    Track poll()
+    @Override
+    void close() {
+        onLoad.remove(this)
+    }
 }

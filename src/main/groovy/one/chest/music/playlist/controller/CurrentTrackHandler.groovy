@@ -44,7 +44,7 @@ class CurrentTrackHandler extends GroovyHandler {
     @Override
     protected void handle(GroovyContext ctx) {
         try {
-            PlayableTrack playableTrack = playlist.playableTracks.peek()
+            PlayableTrack playableTrack = playlist.currentTrack()
             ctx.render json(track: playableTrack?.track, position: playableTrack?.timePosition)
         } catch (e) {
             log.error("Request handling error", e)
