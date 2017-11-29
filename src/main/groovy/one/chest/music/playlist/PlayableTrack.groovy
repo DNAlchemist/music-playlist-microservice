@@ -106,7 +106,6 @@ class PlayableTrack {
                             def part = Unpooled.copiedBuffer(bytes)
                             buffer << part
                             sendToSubscribers(part)
-                            log.trace("New entry. Buffer size: ${buffer.size()} * ${bufferEntrySize}")
                             bytes = new byte[bufferEntrySize]
                         }
                     }
