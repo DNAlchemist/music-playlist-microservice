@@ -33,12 +33,12 @@ class Application {
     String version
 
     @Memoized
-    public static Application getInstance() {
+    static Application getInstance() {
         Properties properties = new Properties()
         Application
                 .classLoader
                 .getResource("application.properties")
-                .withInputStream(properties.&load)
+                .withInputStream({ is -> properties.load(is) })
         Application application = new Application()
         properties.each { k, v -> application["$k"] = v }
         return application
