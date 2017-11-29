@@ -24,6 +24,8 @@
 package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import one.chest.music.playlist.controller.Track
 import one.chest.music.playlist.repository.NoSuchTrackException
@@ -98,6 +100,13 @@ class Playlist {
 
     Collection<Track> getTracks() {
         return playableTracks*.track + playlistRepository.tracks
+    }
+
+    void deliverer(@ClosureParams(
+            value = SimpleType.class,
+            options = "java.util.Queue") Closure<?> c) {
+        Deliverer<PlayableTrack> deliverer = new Deliverer<>(playableTracks, onLoadTrack)
+        c(deliverer.pack)
     }
 
     Deliverer<PlayableTrack> deliverer() {

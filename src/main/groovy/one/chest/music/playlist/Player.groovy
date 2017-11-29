@@ -30,11 +30,9 @@ import io.netty.buffer.Unpooled
 import one.chest.music.playlist.controller.Track
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
-import org.reactivestreams.Subscription
 
 import javax.inject.Inject
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 import static java.lang.Thread.currentThread
 
@@ -75,28 +73,25 @@ class Player implements Runnable {
     Publisher<ByteBuf> broadcast() {
         return { Subscriber<ByteBuf> s ->
             try {
-                playlist.deliverer().withCloseable { deliverer ->
-                    Queue<PlayableTrack> tracks = deliverer.pack
-                    AtomicBoolean requestCanceled = new AtomicBoolean()
+                playlist.deliverer { Queue<PlayableTrack> tracks ->
                     log.debug("Client connected")
 
-                    s.onSubscribe([request: { l -> }, cancel: {
-                        log.trace("Request canceled")
-                        requestCanceled.set(true)
-                    }] as Subscription)
+                    def subscription = new BroadcastSubscription()
+                    s.onSubscribe(subscription)
 
-                    while (!requestCanceled.get()) {
+                    while (!subscription.canceled) {
                         while (!tracks.empty) {
-                            broadcastTrack(s, tracks.poll(), requestCanceled)
+                            PlayableTrack track = tracks.poll()
+                            broadcastTrack(s, track, subscription)
                         }
                         if (!configuration.holdConnection) {
                             break
                         }
                         try {
-                            log.debug("Park thread. Waiting for adding tracks")
+                            log.trace("Park thread. Waiting for adding tracks")
                             playlist.lock.lock()
-                            if (tracks.empty)
-                                playlist.loadTracks.await(5, TimeUnit.SECONDS)
+                            if (!subscription.canceled && tracks.empty)
+                                playlist.loadTracks.await(1, TimeUnit.SECONDS)
                         } finally {
                             playlist.lock.unlock()
                         }
@@ -111,13 +106,13 @@ class Player implements Runnable {
         } as Publisher<ByteBuf>
     }
 
-    private static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack, AtomicBoolean canceled) {
-        playableTrack.deliverer().withCloseable { deliverer ->
-            Queue<ByteBuf> stack = deliverer.pack
-            ByteBuf buf
-            while (!canceled.get() && (!playableTrack.loaded || (buf = stack.poll()) != null)) {
+    private
+    static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack, BroadcastSubscription subscription) {
+        playableTrack.deliverer { Queue<ByteBuf> stack ->
+            subscription.buffer = stack
+            ByteBuf buf = Unpooled.buffer()
+            while (!subscription.canceled && (!playableTrack.loaded || (buf = stack.poll()) != null)) {
                 if (buf) {
-                    log.trace("Sending ${buf}")
                     s.onNext(Unpooled.copiedBuffer(buf.array()))
                 }
             }

@@ -24,6 +24,8 @@
 package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -83,11 +85,18 @@ class PlayableTrack {
     }
 
     long getTimePosition() {
-        return System.currentTimeMillis() - startTime
+        return System.currentTimeMillis() - startTime.get()
+    }
+
+    void deliverer(@ClosureParams(
+            value = SimpleType.class,
+            options = "java.util.Queue") Closure<?> c) {
+        Deliverer<ByteBuf> deliverer = new Deliverer<ByteBuf>(buffer, onLoadBuf)
+        c(deliverer.pack)
     }
 
     Deliverer<ByteBuf> deliverer() {
-        return new Deliverer<ByteBuf>(buffer, onLoadBuf)
+        return new Deliverer<>(buffer, onLoadBuf)
     }
 
     void loadResource() {
