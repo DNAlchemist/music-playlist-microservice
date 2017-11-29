@@ -21,40 +21,43 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import one.chest.music.playlist.repository.FileSystemTrackStorage
+import one.chest.music.playlist.repository.TrackStorage
+import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import ratpack.guice.BindingsImposition
+import ratpack.impose.ImpositionsSpec
 
 import java.nio.file.Path
 
-@Slf4j
 @CompileStatic
-class FileSystemTrackStorage implements TrackStorage {
+class MusicPlaylistApplicationUnderTest extends GroovyRatpackMainApplicationUnderTest {
 
-    Path directory
+    private Path temporaryFolder
 
-    FileSystemTrackStorage(Path directory) {
-        assert directory.toFile().exists()
-        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
-        this.directory = directory
+    final PlayerConfiguration playerConfiguration = [
+            holdConnection: true
+    ] as PlayerConfiguration
+
+    MusicPlaylistApplicationUnderTest(Path temporaryFolder) {
+        this.temporaryFolder = temporaryFolder
     }
 
     @Override
-    public boolean isTrackExists(int albumId, int trackId) {
-        return directory.resolve("${albumId}.${trackId}").toFile().exists()
+    protected void addImpositions(ImpositionsSpec impositions) {
+        impositions.add(BindingsImposition.of({
+            it.bindInstance(TrackStorage, new FileSystemTrackStorage(temporaryFolder))
+            it.bindInstance(PlayerConfiguration, playerConfiguration)
+        }))
     }
 
-    @Override
-    public InputStream getTrackInputStream(int albumId, int trackId) {
-        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
-        checkTrackExists(albumId, trackId)
-        return directory.resolve("${albumId}.${trackId}").newInputStream()
-    }
-
-    private void checkTrackExists(int albumId, int trackId) {
-        if (!isTrackExists(albumId, trackId)) {
-            throw new NoSuchTrackException(albumId, trackId)
+    def releaseStreamConnectionAfter(long mills) {
+        synchronized (playerConfiguration) {
+            Thread.sleep(mills)
+            playerConfiguration.holdConnection = false
         }
     }
+
 }

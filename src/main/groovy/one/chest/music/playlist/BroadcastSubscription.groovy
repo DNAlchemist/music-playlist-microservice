@@ -21,40 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.netty.buffer.ByteBuf
+import org.reactivestreams.Subscription
 
-import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Slf4j
 @CompileStatic
-class FileSystemTrackStorage implements TrackStorage {
+class BroadcastSubscription implements Subscription {
 
-    Path directory
+    private final AtomicBoolean requestCanceled = new AtomicBoolean()
 
-    FileSystemTrackStorage(Path directory) {
-        assert directory.toFile().exists()
-        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
-        this.directory = directory
+    Queue<ByteBuf> buffer
+
+    @Override
+    void request(long n) {
+        log.trace("Request ${n}")
+//        buffer?.with({ (n as Long).times(buffer.&remove) })
     }
 
     @Override
-    public boolean isTrackExists(int albumId, int trackId) {
-        return directory.resolve("${albumId}.${trackId}").toFile().exists()
+    void cancel() {
+        log.trace("Request canceled")
+        requestCanceled.set(true)
     }
 
-    @Override
-    public InputStream getTrackInputStream(int albumId, int trackId) {
-        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
-        checkTrackExists(albumId, trackId)
-        return directory.resolve("${albumId}.${trackId}").newInputStream()
-    }
-
-    private void checkTrackExists(int albumId, int trackId) {
-        if (!isTrackExists(albumId, trackId)) {
-            throw new NoSuchTrackException(albumId, trackId)
-        }
+    boolean isCanceled() {
+        return requestCanceled.get()
     }
 }

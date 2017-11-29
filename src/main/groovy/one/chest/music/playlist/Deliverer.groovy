@@ -21,40 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 
-import java.nio.file.Path
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @Slf4j
+@TupleConstructor
 @CompileStatic
-class FileSystemTrackStorage implements TrackStorage {
+class Deliverer<T> implements Closeable {
 
-    Path directory
+    Queue<T> queue
+    Map<Object, Closure<?>> onLoad
 
-    FileSystemTrackStorage(Path directory) {
-        assert directory.toFile().exists()
-        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
-        this.directory = directory
+    @Memoized
+    Queue<T> getPack() {
+        def queue = new ConcurrentLinkedQueue(queue)
+        onLoad.put(this, { T pack ->
+            log.debug("Subscriber received the package: " + pack)
+            queue << pack
+        })
+        return queue
     }
 
     @Override
-    public boolean isTrackExists(int albumId, int trackId) {
-        return directory.resolve("${albumId}.${trackId}").toFile().exists()
-    }
-
-    @Override
-    public InputStream getTrackInputStream(int albumId, int trackId) {
-        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
-        checkTrackExists(albumId, trackId)
-        return directory.resolve("${albumId}.${trackId}").newInputStream()
-    }
-
-    private void checkTrackExists(int albumId, int trackId) {
-        if (!isTrackExists(albumId, trackId)) {
-            throw new NoSuchTrackException(albumId, trackId)
-        }
+    void close() {
+        onLoad.remove(this)
     }
 }

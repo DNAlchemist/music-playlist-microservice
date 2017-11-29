@@ -21,40 +21,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist.controller
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import one.chest.music.playlist.service.PlaylistService
+import ratpack.groovy.handling.GroovyContext
+import ratpack.groovy.handling.GroovyHandler
 
-import java.nio.file.Path
+import javax.inject.Inject
 
 @Slf4j
 @CompileStatic
-class FileSystemTrackStorage implements TrackStorage {
+class StreamTrackHandler extends GroovyHandler {
 
-    Path directory
-
-    FileSystemTrackStorage(Path directory) {
-        assert directory.toFile().exists()
-        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
-        this.directory = directory
-    }
+    @Inject
+    PlaylistService playlist
 
     @Override
-    public boolean isTrackExists(int albumId, int trackId) {
-        return directory.resolve("${albumId}.${trackId}").toFile().exists()
-    }
-
-    @Override
-    public InputStream getTrackInputStream(int albumId, int trackId) {
-        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
-        checkTrackExists(albumId, trackId)
-        return directory.resolve("${albumId}.${trackId}").newInputStream()
-    }
-
-    private void checkTrackExists(int albumId, int trackId) {
-        if (!isTrackExists(albumId, trackId)) {
-            throw new NoSuchTrackException(albumId, trackId)
+    protected void handle(GroovyContext ctx) {
+        try {
+            ctx.response.contentType 'audio/mpeg'
+            ctx.response.sendStream playlist.broadcast()
+        } catch (e) {
+            log.error("Request handling error", e)
+            ctx.response.status 500
+            ctx.response.send e.message ?: "No message"
         }
     }
+
 }

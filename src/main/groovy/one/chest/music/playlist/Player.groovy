@@ -25,13 +25,14 @@ package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
 import one.chest.music.playlist.controller.Track
-import one.chest.music.playlist.repository.PlaylistRepository
+import org.reactivestreams.Publisher
+import org.reactivestreams.Subscriber
 
 import javax.inject.Inject
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.locks.Condition
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.TimeUnit
 
 import static java.lang.Thread.currentThread
 
@@ -39,71 +40,97 @@ import static java.lang.Thread.currentThread
 @CompileStatic
 class Player implements Runnable {
 
-    private final PlaylistRepository playlist
+    private final Playlist playlist
+    private final PlayerConfiguration configuration
 
     @Inject
-    Player(PlaylistRepository playlist) {
+    Player(Playlist playlist, PlayerConfiguration configuration) {
         this.playlist = playlist
-    }
-
-    private ReentrantLock lock = new ReentrantLock()
-    private Condition condition = lock.newCondition()
-    Track currentTrack
-    private AtomicLong currentTrackStartTime = new AtomicLong()
-
-    long getCurrentTrackTimePosition() {
-        return System.currentTimeMillis() - currentTrackStartTime
+        this.configuration = configuration
     }
 
     @Override
     void run() {
         log.info("Player thread started as ${currentThread().name}")
         while (!currentThread().interrupted) {
-            playTrack(fetchTrack())
+            playTrack()
         }
         log.info("Thread ${currentThread().name} is interrupted")
     }
 
-    private Track fetchTrack() {
-        try {
-            lock.lock()
-            if (playlist.isEmpty()) {
-                condition.await()
-            }
-            return playlist.poll()
-        } finally {
-            lock.unlock()
-        }
-    }
-
-    private void playTrack(Track track) {
-        try {
-            assert track
-            currentTrack = track
-            currentTrackStartTime.set(System.currentTimeMillis())
-            log.info("Playing " + track)
-            while (currentTrackTimePosition <= track.duration) {
-                Thread.sleep(16)
-            }
-        } catch (InterruptedException ignore) {
-            currentThread().interrupt()
-        } finally {
-            currentTrackStartTime.set(System.currentTimeMillis())
-        }
-    }
-
     void addTrack(Track track) {
-        try {
-            lock.lock()
-            playlist.addTrack(track)
-            log.info("Track ${track} added to playlist")
-            condition.signal()
-        } finally {
-            lock.unlock()
-        }
+        playlist.addTrack(track)
     }
 
     Collection<Track> getTracks() {
         return playlist.tracks
+    }
+
+    PlayableTrack currentTrack() {
+        return playlist.peek()
+    }
+
+    Publisher<ByteBuf> broadcast() {
+        return { Subscriber<ByteBuf> s ->
+            try {
+                playlist.deliverer { Queue<PlayableTrack> tracks ->
+                    log.debug("Client connected")
+
+                    def subscription = new BroadcastSubscription()
+                    s.onSubscribe(subscription)
+
+                    while (!subscription.canceled) {
+                        while (!tracks.empty) {
+                            PlayableTrack track = tracks.poll()
+                            broadcastTrack(s, track, subscription)
+                        }
+                        if (!configuration.holdConnection) {
+                            break
+                        }
+                        try {
+                            log.trace("Park thread. Waiting for adding tracks")
+                            playlist.lock.lock()
+                            if (!subscription.canceled && tracks.empty)
+                                playlist.loadTracks.await(1, TimeUnit.SECONDS)
+                        } finally {
+                            playlist.lock.unlock()
+                        }
+                    }
+                    log.debug("Client disconnected")
+                }
+            } catch (Throwable e) {
+                s.onError(e)
+            } finally {
+                s.onComplete()
+            }
+        } as Publisher<ByteBuf>
+    }
+
+    private
+    static void broadcastTrack(Subscriber<ByteBuf> s, PlayableTrack playableTrack, BroadcastSubscription subscription) {
+        playableTrack.deliverer { Queue<ByteBuf> stack ->
+            subscription.buffer = stack
+            ByteBuf buf = Unpooled.buffer()
+            while (!subscription.canceled && (!playableTrack.loaded || (buf = stack.poll()) != null)) {
+                if (buf) {
+                    s.onNext(Unpooled.copiedBuffer(buf.array()))
+                }
+            }
+        }
+
+    }
+
+    private void playTrack() {
+        try {
+            PlayableTrack playableTrack = playlist.fetch()
+            playableTrack.play()
+            log.info("Playing " + playableTrack.track)
+            while (!playableTrack.played) {
+                Thread.sleep(16)
+            }
+            playlist.remove()
+        } catch (InterruptedException ignore) {
+            currentThread().interrupt()
+        }
     }
 }

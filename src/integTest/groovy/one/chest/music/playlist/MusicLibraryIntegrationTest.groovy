@@ -24,8 +24,10 @@
 package one.chest.music.playlist
 
 import groovy.transform.CompileStatic
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import ratpack.groovy.test.GroovyRatpackMainApplicationUnderTest
+import org.junit.rules.TemporaryFolder
 import ratpack.http.client.ReceivedResponse
 
 import java.util.concurrent.TimeUnit
@@ -33,7 +35,18 @@ import java.util.concurrent.TimeUnit
 @CompileStatic
 class MusicLibraryIntegrationTest {
 
-    private GroovyRatpackMainApplicationUnderTest app = new GroovyRatpackMainApplicationUnderTest()
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder()
+
+    MusicPlaylistApplicationUnderTest app
+
+    @Before
+    void setUp() {
+        app = new MusicPlaylistApplicationUnderTest(temporaryFolder.root.toPath())
+        temporaryFolder.newFile('1.2').bytes = 0..1025 as byte[]
+        temporaryFolder.newFile('3.4').bytes = 0..128 as byte[]
+        temporaryFolder.newFile('5.6')
+    }
 
     @Test
     void testHealth() {
@@ -63,31 +76,31 @@ class MusicLibraryIntegrationTest {
         def response = addTrack(1, 2, 1000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000}]'
 
         response = addTrack(3, 4, 5000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000},{"albumId":3,"trackId":4,"duration":5000}]'
 
         response = addTrack(5, 6, 3000)
         assert response.body.text.empty && response.status.code == 201
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":1000},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
     @Test
     void testPlayTrack() {
         assert [
-                addTrack(1, 2, 1000),
+                addTrack(1, 2, 500),
                 addTrack(3, 4, 5000),
                 addTrack(5, 6, 3000)
         ]*.statusCode == [201] * 3
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":500},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
 
         TimeUnit.SECONDS.sleep(1)
-        assert tracks == '[{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
     }
 
     @Test
@@ -105,16 +118,77 @@ class MusicLibraryIntegrationTest {
     @Test
     void testCheckCurrentTrack() {
         assert [
-                addTrack(1, 2, 1000),
+                addTrack(1, 2, 500),
                 addTrack(3, 4, 5000),
                 addTrack(5, 6, 3000)
         ]*.statusCode == [201] * 3
 
-        assert tracks == '[{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
+        assert tracks == '[{"albumId":1,"trackId":2,"duration":500},{"albumId":3,"trackId":4,"duration":5000},{"albumId":5,"trackId":6,"duration":3000}]'
 
         TimeUnit.SECONDS.sleep(1)
         assert currentTrack ==~ /\{"track":\{"albumId":3,"trackId":4,"duration":5000\},"position":\d{1,3}\}/
     }
 
+    @Test
+    void testStream() {
+        assert addTrack(1, 2, 5000).statusCode == 201
+
+        Thread.start {
+            app.releaseStreamConnectionAfter(100)
+        }
+        def response = app.httpClient.get("playlist/tracks/stream")
+        assert response.statusCode == 200
+
+        def was = response.body.bytes
+        assert was.length > 1025
+
+        def expected = 0..1025 as byte[]
+
+        assert was[0..1025] as byte[] == expected
+
+        def wasTail = was[1026..-1] as byte[]
+        assert wasTail == ([0] * wasTail.length) as byte[]
+    }
+
+
+    @Test
+    void testAppendWhenConnectionHolden() {
+        assert addTrack(1, 2, 500).statusCode == 201
+
+        Thread.start {
+            Thread.sleep(50)
+            addTrack(3, 4, 500).statusCode == 201
+            app.releaseStreamConnectionAfter(500)
+        }
+        def response = app.httpClient.get("playlist/tracks/stream")
+        assert response.statusCode == 200
+
+        def was = response.body.bytes
+        assert was.length > 1153
+
+        def expectedFirstPart = (0..1025) as byte[]
+        def expectedSecondPart = (1..128) as byte[]
+
+        assert was[0..1025] as byte[] == expectedFirstPart
+        def trimmedArray = trimArray(was[1026..-1] as byte[])
+        assert trimmedArray == expectedSecondPart
+    }
+
+    private static byte[] trimArray(byte[] bytes) {
+        int start = 0, end = bytes.length - 1
+        for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] != 0) {
+                start = i
+                break
+            }
+        }
+        for (int i = bytes.length - 1; i >= 0; i--) {
+            if (bytes[i] != 0) {
+                end = i
+                break
+            }
+        }
+        return bytes[start..end] as byte[]
+    }
 
 }

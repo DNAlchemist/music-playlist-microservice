@@ -22,13 +22,17 @@
  * SOFTWARE.
  */
 
+
 import com.google.inject.Scopes
-import one.chest.music.playlist.controller.ApplicationVersionHandler
-import one.chest.music.playlist.controller.CurrentTrackHandler
-import one.chest.music.playlist.controller.HealthHandler
-import one.chest.music.playlist.controller.TracksHandler
+import one.chest.music.playlist.controller.*
+import one.chest.music.playlist.repository.FileSystemTrackStorage
+import one.chest.music.playlist.repository.TrackStorage
 import one.chest.music.playlist.repository.inmemory.InMemoryGuiceModule
 import one.chest.music.playlist.service.PlaylistService
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import static ratpack.groovy.Groovy.ratpack
 import static ratpack.handling.RequestLogger.ncsa
@@ -39,9 +43,11 @@ ratpack {
         module InMemoryGuiceModule
         module { binder ->
             binder.bind(PlaylistService).in(Scopes.SINGLETON)
+            binder.bind(TrackStorage).toInstance(new FileSystemTrackStorage(directory(Paths.get("storage"))))
         }
         module {
             bind HealthHandler
+            bind StreamTrackHandler
             bind ApplicationVersionHandler
             bind TracksHandler
             bind CurrentTrackHandler
@@ -55,5 +61,17 @@ ratpack {
 
         path "playlist/tracks", TracksHandler
         get "playlist/tracks/current", CurrentTrackHandler
+        get "playlist/tracks/stream", StreamTrackHandler
+    }
+}
+
+static directory(Path path) {
+    use(Files) {
+        if (!path.exists()) {
+            return path.createDirectory()
+        } else if (!path.isDirectory()) {
+            throw new IllegalStateException("Expected $path.fileName to be a directory but found a file")
+        }
+        return path
     }
 }

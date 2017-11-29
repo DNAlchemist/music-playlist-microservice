@@ -21,40 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package one.chest.music.playlist.repository
+package one.chest.music.playlist
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import groovy.transform.CompileStatic;
 
-import java.nio.file.Path
-
-@Slf4j
 @CompileStatic
-class FileSystemTrackStorage implements TrackStorage {
-
-    Path directory
-
-    FileSystemTrackStorage(Path directory) {
-        assert directory.toFile().exists()
-        log.info("Initialize tracks storage in directory: ${directory.toAbsolutePath()}")
-        this.directory = directory
-    }
-
-    @Override
-    public boolean isTrackExists(int albumId, int trackId) {
-        return directory.resolve("${albumId}.${trackId}").toFile().exists()
-    }
-
-    @Override
-    public InputStream getTrackInputStream(int albumId, int trackId) {
-        log.debug("Load track from path ${directory.resolve("${albumId}.${trackId}")}")
-        checkTrackExists(albumId, trackId)
-        return directory.resolve("${albumId}.${trackId}").newInputStream()
-    }
-
-    private void checkTrackExists(int albumId, int trackId) {
-        if (!isTrackExists(albumId, trackId)) {
-            throw new NoSuchTrackException(albumId, trackId)
-        }
-    }
+class PlayerConfiguration {
+    def holdConnection = true
 }
