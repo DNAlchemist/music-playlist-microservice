@@ -28,6 +28,7 @@ import one.chest.music.playlist.Application
 import static groovy.json.JsonOutput.toJson
 
 def app = Application.getInstance()
+env = System.getenv()
 
 appender("CONSOLE", ConsoleAppender) {
     encoder(PatternLayoutEncoder) {
@@ -35,10 +36,12 @@ appender("CONSOLE", ConsoleAppender) {
     }
 }
 
-appender("LOGSTASH", LogstashTcpSocketAppender) {
-    destination = "localhost:5555"
-    encoder LogstashEncoder, {
-        customFields = toJson([app_name: app.name, app_version: app.version])
+if (env['LOGSTASH_DESTINATION']) {
+    appender("LOGSTASH", LogstashTcpSocketAppender) {
+        destination = env['LOGSTASH_DESTINATION']
+        encoder LogstashEncoder, {
+            customFields = toJson([app_name: app.name, app_version: app.version])
+        }
     }
 }
 
